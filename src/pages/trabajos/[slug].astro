@@ -1,0 +1,183 @@
+---
+import type { CollectionEntry } from "astro:content";
+import Layout from "../../layouts/Layout.astro";
+import GaleriaCarrusel from "../../components/GaleriaCarrusel.astro";
+import HeroVideoModal from "../../components/HeroVideoModal.astro";
+import VideoSecundarioModal from "../../components/VideoSecundarioModal.astro";
+import { getTrabajosOrdenados } from "../../lib/trabajos";
+import { withBase } from "../../lib/paths";
+
+export async function getStaticPaths() {
+	const trabajos = await getTrabajosOrdenados();
+	return trabajos.map((trabajo) => ({
+		params: { slug: trabajo.id },
+		props: { trabajo },
+	}));
+}
+
+interface Props {
+	trabajo: CollectionEntry<"trabajos">;
+}
+
+const { trabajo } = Astro.props;
+const { videoPrincipal, galeria, descripcion, imagenesFeatured, videoSecundario, creditos } = trabajo.data;
+
+const trabajosOrdenados = await getTrabajosOrdenados();
+const indiceActual = trabajosOrdenados.findIndex((item) => item.id === trabajo.id);
+const trabajoAnterior =
+	trabajosOrdenados[(indiceActual - 1 + trabajosOrdenados.length) % trabajosOrdenados.length];
+const trabajoSiguiente = trabajosOrdenados[(indiceActual + 1) % trabajosOrdenados.length];
+
+function archivoUrl(archivo: string, enGaleria = false) {
+	const carpeta = enGaleria ? `galeria/` : "";
+	return withBase(`/trabajos/${trabajo.id}/${carpeta}${encodeURIComponent(archivo)}`);
+}
+
+function nombreTexto(nombre: string | string[]) {
+	return Array.isArray(nombre) ? nombre.join(" y ") : nombre;
+}
+
+function isVideo(archivo: string) {
+	return /\.mp4$/i.test(archivo);
+}
+
+const galeriaClips = galeria.filter((archivo) => isVideo(archivo));
+const heroClipPreview = galeriaClips[0];
+const secundarioClipPreview = galeriaClips[1] ?? galeriaClips[0];
+
+const arrowPath = "M34.7831 7.00026L10.7831 26.1987L34.7831 48.0003";
+---
+
+<Layout>
+	<section data-header-surface="video" class="bg-ink">
+		<HeroVideoModal
+			clipPreview={heroClipPreview ? archivoUrl(heroClipPreview, true) : ""}
+			videoPrincipal={archivoUrl(videoPrincipal.videoId)}
+			slug={trabajo.id}
+		/>
+	</section>
+
+	<section data-header-surface="dark">
+		<GaleriaCarrusel items={galeria} slug={trabajo.id} />
+	</section>
+
+	{
+		descripcion && (
+			<section data-header-surface="solid" class="bg-cream px-11 py-16">
+				<p class="text-info font-archivo font-medium text-ink">{descripcion}</p>
+			</section>
+		)
+	}
+
+	{
+		imagenesFeatured && imagenesFeatured.length > 0 && (
+			<section
+				data-header-surface="dark"
+				class:list={["grid", imagenesFeatured.length === 1 ? "grid-cols-1" : "grid-cols-2"]}
+			>
+				{imagenesFeatured.map((archivo) => (
+					<div
+						class:list={[
+							"relative min-h-0 min-w-0 overflow-hidden",
+							imagenesFeatured!.length === 1 ? "" : "aspect-square",
+						]}
+					>
+						{isVideo(archivo) ? (
+							<video
+								src={archivoUrl(archivo, true)}
+								autoplay
+								muted
+								loop
+								playsinline
+								class:list={[
+									"block max-w-full",
+									imagenesFeatured!.length === 1 ? "h-auto w-full" : "h-full w-full object-cover",
+								]}
+							/>
+						) : (
+							<img
+								src={archivoUrl(archivo, true)}
+								alt=""
+								class:list={[
+									"block max-w-full",
+									imagenesFeatured!.length === 1 ? "h-auto w-full" : "h-full w-full object-cover",
+								]}
+							/>
+						)}
+					</div>
+				))}
+			</section>
+		)
+	}
+
+	{
+		videoSecundario && (
+			<section data-header-surface="dark" class="bg-ink">
+				<VideoSecundarioModal
+					clipPreview={secundarioClipPreview ? archivoUrl(secundarioClipPreview, true) : ""}
+					videoSecundario={archivoUrl(videoSecundario.videoId)}
+					track={videoSecundario.track}
+				/>
+			</section>
+		)
+	}
+
+	<section data-header-surface="solid" class="flex bg-cream px-11 py-24 justify-center items-center">
+		<div class="flex flex-col md:flex-row w-full justify-between gap-8 max-w-250.75 self-center">
+			<h2 class="mb-12 mt-3 text-credits font-archivo font-black uppercase text-ink">Créditos</h2>
+
+		<div class="flex min-w-0 w-full flex-col md:max-w-150">
+			{
+				creditos.map((bloque) => (
+					<div class="flex flex-col justify-around">
+						{bloque.label && (
+							<p class="mb-2 text-din-label font-archivo font-extrabold text-ink">{bloque.label}</p>
+						)}
+						{bloque.items.map((item) => (
+							<div class="flex flex-col gap-1 text-din-label text-ink md:flex-row md:items-baseline md:justify-between md:gap-8">
+								<span class="font-din font-bold whitespace-normal md:whitespace-nowrap">{item.rol}</span>
+								<span class="font-din md:text-right">{nombreTexto(item.nombre)}</span>
+							</div>
+						))}
+					</div>
+				))
+			}
+		</div>
+		</div>
+
+	</section>
+
+	<section data-header-surface="solid" class="bg-cream px-11 py-16">
+		<nav
+			aria-label="Navegación entre proyectos"
+			class="mx-auto grid max-w-250.75 grid-cols-1 gap-x-8 gap-y-10 md:grid-cols-3"
+		>
+			<a
+				href={withBase(`/trabajos/${trabajoAnterior.id}`)}
+				class="group -mx-4 flex flex-row items-center justify-start gap-3 rounded px-4 py-6 transition-[gap] duration-50 ease-out hover:gap-6 md:justify-end"
+			>
+					<svg viewBox="0 0 42 55" fill="none" class="h-4 w-auto shrink-0" xmlns="http://www.w3.org/2000/svg">
+						<path d={arrowPath} stroke="currentColor" stroke-width="14" stroke-linecap="round"></path>
+					</svg>
+				<span class="text-[1rem] font-din font-bold text-ink"> anterior</span>
+			</a>
+
+			<a
+				href={withBase("/portfolio")}
+				class="-mx-4 flex flex-row items-center justify-center rounded px-4 py-6 transition-transform duration-50 ease-out hover:-translate-y-1"
+			>
+				<span class="text-[1rem] font-din font-bold text-ink">portfolio</span>
+			</a>
+
+			<a
+				href={withBase(`/trabajos/${trabajoSiguiente.id}`)}
+				class="group -mx-4 flex flex-row items-center gap-3 rounded px-4 py-6 transition-[gap] duration-50 ease-out hover:gap-6"
+			>
+				<span class="text-[1rem] font-din font-bold text-ink"> siguiente</span>
+				<svg viewBox="0 0 42 55" fill="none" class="h-4 w-auto shrink-0 rotate-180" xmlns="http://www.w3.org/2000/svg">
+					<path d={arrowPath} stroke="currentColor" stroke-width="14" stroke-linecap="round"></path>
+				</svg>
+			</a>
+		</nav>
+	</section>
+</Layout>

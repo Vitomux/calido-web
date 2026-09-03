@@ -1,0 +1,129 @@
+---
+interface Props {
+	clipPreview: string;
+	videoSecundario: string;
+	track?: string;
+}
+
+const { clipPreview, videoSecundario, track } = Astro.props;
+---
+
+<div
+	class="video-secundario-modal relative h-screen w-full cursor-pointer"
+	role="button"
+	tabindex="0"
+	aria-label={track ? `Reproducir ${track}` : "Reproducir video"}
+>
+	<video
+		src={clipPreview}
+		autoplay
+		muted
+		loop
+		playsinline
+		class="pointer-events-none absolute inset-0 h-full w-full object-cover"
+		data-vt-name="video-secundario-modal-thumb"
+		style="view-transition-name: video-secundario-modal-thumb; view-transition-class: vt-morph"
+	></video>
+
+	<div class="pointer-events-none absolute inset-0 flex items-center justify-center text-cream" aria-hidden="true">
+		<svg viewBox="0 0 194 186" fill="currentColor" class="h-32 w-28 rotate-90">
+			<path
+				d="M82.7468 8.54704C88.7458 -2.84902 105.064 -2.84901 111.063 8.54704L191.946 162.198C197.555 172.853 189.829 185.651 177.788 185.651H16.0218C3.98111 185.651 -3.74501 172.853 1.86365 162.198L82.7468 8.54704Z"
+			></path>
+		</svg>
+	</div>
+</div>
+
+<div
+	class="video-secundario-modal-overlay fixed inset-0 z-50 hidden items-center justify-center bg-ink/80 p-11"
+	data-open="false"
+>
+	<video
+		class="video-secundario-modal-video max-h-full max-w-full object-contain"
+		src={videoSecundario}
+		controls
+		style="view-transition-name: none; view-transition-class: vt-morph"
+	></video>
+
+	<button
+		type="button"
+		class="video-secundario-modal-rotate absolute top-4 right-4 z-20 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-cream/10 text-cream landscape:hidden md:hidden"
+		aria-label="Ver en horizontal"
+		aria-pressed="false"
+	>
+		<svg viewBox="0 0 24 24" fill="none" class="h-6 w-6" xmlns="http://www.w3.org/2000/svg">
+			<rect x="7" y="2" width="10" height="16" rx="1.5" stroke="currentColor" stroke-width="1.5"></rect>
+			<path d="M19 11a7 7 0 1 1-2.5-5.35" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+			<path d="M19 5v4h-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+			></path>
+		</svg>
+	</button>
+</div>
+
+<script>
+	function initVideoSecundarioModal() {
+		document.querySelectorAll<HTMLElement>(".video-secundario-modal").forEach((hero) => {
+			const overlay = hero.nextElementSibling as HTMLElement | null;
+			if (!overlay || !overlay.classList.contains("video-secundario-modal-overlay")) return;
+			const previewVideo = hero.querySelector<HTMLVideoElement>("video");
+			const modalVideo = overlay.querySelector<HTMLVideoElement>(".video-secundario-modal-video");
+			const rotateBtn = overlay.querySelector<HTMLButtonElement>(".video-secundario-modal-rotate");
+			const vtName = previewVideo?.dataset.vtName;
+
+			rotateBtn?.addEventListener("click", () => {
+				const rotated = overlay!.classList.toggle("force-landscape");
+				rotateBtn.setAttribute("aria-pressed", String(rotated));
+			});
+
+			function withViewTransition(mutate: () => void) {
+				if (typeof document.startViewTransition === "function") {
+					document.startViewTransition(mutate);
+				} else {
+					mutate();
+				}
+			}
+
+			function openModal() {
+				withViewTransition(() => {
+					if (vtName) {
+						if (previewVideo) previewVideo.style.viewTransitionName = "none";
+						if (modalVideo) modalVideo.style.viewTransitionName = vtName;
+					}
+					overlay!.setAttribute("data-open", "true");
+					overlay!.classList.remove("hidden");
+					overlay!.classList.add("flex");
+					modalVideo?.play().catch(() => {});
+				});
+			}
+
+			function closeModal() {
+				// No view transition on the way out — straight back to the hero, no
+				// morph animation. Only opening still animates.
+				if (vtName) {
+					if (modalVideo) modalVideo.style.viewTransitionName = "none";
+					if (previewVideo) previewVideo.style.viewTransitionName = vtName;
+				}
+				overlay!.setAttribute("data-open", "false");
+				overlay!.classList.add("hidden");
+				overlay!.classList.remove("flex");
+				overlay!.classList.remove("force-landscape");
+				rotateBtn?.setAttribute("aria-pressed", "false");
+				modalVideo?.pause();
+			}
+
+			hero.addEventListener("click", openModal);
+			hero.addEventListener("keydown", (event) => {
+				if (event.key === "Enter" || event.key === " ") {
+					event.preventDefault();
+					openModal();
+				}
+			});
+
+			overlay.addEventListener("click", (event) => {
+				if (event.target === overlay) closeModal();
+			});
+		});
+	}
+
+	initVideoSecundarioModal();
+</script>

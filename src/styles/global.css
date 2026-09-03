@@ -1,0 +1,162 @@
+@import "tailwindcss";
+
+/*
+ * Cross-document View Transitions, scoped down to just the Portfolio ->
+ * project hero-media morph: the browser's default gives every navigation
+ * a full-page crossfade (::view-transition-old/new(root)), which is
+ * disabled here so the general swap stays instant, same as before — the
+ * Drawer's own reveal effect (see the .drawer-preopen rule below) is
+ * unrelated to this and keeps working exactly as it did, since it never
+ * participates in the named-group system.
+ */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+/*
+ * "Drawer as loading screen": on a Drawer-driven navigation, the new page
+ * has to render with the Drawer already open from its very first frame —
+ * otherwise there'd be a flash of it closed before an opening animation
+ * plays. The blocking inline script in Layout.astro's <head> adds
+ * `drawer-preopen` to <html> (before the Drawer's own DOM exists) when it
+ * detects sessionStorage's `drawerLoading` flag, and this rule forces the
+ * Drawer's open visual state instantly, no transition. Once the page is
+ * ready, DrawerMenu.astro removes the class — that alone (data-open stays
+ * "false" the whole time) reveals the Drawer's normal closed state, and
+ * since the override's `transition: none` is gone too, it animates via the
+ * Drawer's existing close transition instead of snapping shut.
+ */
+html.drawer-preopen #drawer-menu {
+  /* Tailwind v4's translate-x-* utilities set the standalone CSS `translate`
+     property, not `transform` — this has to override that same property. */
+  translate: 0px !important;
+  transition: none !important;
+  pointer-events: auto !important;
+}
+
+@theme {
+  /* Colors */
+  --color-cream: #f8f5e7;
+  --color-rust: #a33030;
+  --color-apricot: #ef9154;
+  --color-ink: #000000;
+  --color-ghostly-white: #ffffff1a;
+
+  /* Font families (Adobe Fonts kit tkl8mcj + Google Fonts) */
+  --font-akzidenz: "akzidenz-grotesk-next", sans-serif;
+  --font-akzidenz-extend: "akzidenz-grotesk-next-extend", sans-serif;
+  --font-akzidenz-conden: "akzidenz-grotesk-next-conden", sans-serif;
+  --font-din: "urw-din", sans-serif;
+  --font-archivo: "Archivo", sans-serif;
+
+  /*
+   * Text styles: size + line-height, from the Figma stylesheet (a 1920px-wide
+   * desktop canvas). Every size below is fluid via clamp(min, Xvw, max):
+   * the `max` is the original fixed desktop rem value (so nothing changes at
+   * 1920px+, matching Figma exactly like before), the `vw` term is that same
+   * value re-expressed as a percentage of the 1920px canvas (value / 1920 *
+   * 100), so it scales down proportionally to viewport width exactly like it
+   * would if you shrank the desktop design — and `min` is a legibility/
+   * overflow floor for small phones, sized so the single longest word in
+   * that spot still fits inside a ~287px content area (a 375px viewport
+   * minus this site's usual ~44px side padding) without wrapping oddly.
+   */
+  --text-menu: clamp(1.75rem, 5.1563vw, 6.1875rem); /* 99px max — pair with font-akzidenz-extend font-black */
+  --text-menu--line-height: 1.57;
+
+  --text-hero: clamp(3rem, 12.7181vw, 15.2618rem); /* 244.188px max — pair with font-akzidenz-extend font-black; GaleriaCarrusel also fits this dynamically via JS (fitTitles), this is its CSS floor/fallback */
+  --text-hero--line-height: 1.212;
+
+  --text-din-label: clamp(1.375rem, 1.6146vw, 1.9375rem); /* 31px max */
+  --text-din-label--line-height: 2.57;
+
+  --text-info: clamp(1.375rem, 1.6146vw, 1.9375rem); /* 31px max — pair with font-archivo font-medium */
+  --text-info--line-height: 1.212;
+
+  --text-credits: clamp(1.75rem, 2.1354vw, 2.5625rem); /* 41px max */
+  --text-credits--line-height: 1.212;
+
+  --text-footer: clamp(1rem, 1.0417vw, 1.25rem); /* 20px max */
+  --text-footer--line-height: 1.212;
+
+  --text-work: clamp(1.5rem, 3.0581vw, 3.6697rem); /* 58.715px max — pair with font-din font-bold */
+  --text-work--line-height: 1.212;
+
+  --text-portfolio-title: clamp(2.5rem, 6.8848vw, 8.2618rem); /* 132.188px max — pair with font-akzidenz-extend font-black */
+  --text-portfolio-title--line-height: 1.01;
+
+  --text-fotografia-title: clamp(2.25rem, 9.4792vw, 11.375rem); /* 182px max — pair with font-akzidenz-extend font-black */
+  --text-fotografia-title--line-height: 1.19;
+
+  --text-nosotros-title: clamp(2.75rem, 8.6367vw, 10.3641rem); /* 165.825px max — pair with font-akzidenz-extend font-black */
+  --text-nosotros-title--line-height: 1.01;
+
+  --text-nosotros-body: clamp(1.375rem, 1.6146vw, 1.9375rem); /* 31px max — pair with font-din (regular weight) */
+  --text-nosotros-body--line-height: 1.45;
+
+  --text-contacto-title: clamp(2.75rem, 8.6367vw, 10.3641rem); /* 165.825px max — pair with font-akzidenz-extend font-black */
+  --text-contacto-title--line-height: 1.01;
+
+  --text-contacto-field: clamp(1.5rem, 2.0833vw, 2.5rem); /* 40px max — pair with font-din font-bold */
+  --text-contacto-field--line-height: 1.45;
+
+  --text-contacto-button: clamp(1.75rem, 2.3438vw, 2.8125rem); /* 45px max — pair with font-akzidenz-extend font-black */
+  --text-contacto-button--line-height: 1.01;
+}
+
+/*
+ * Shared-element view-transition morphs should be a pure size/position
+ * morph, no crossfade — the browser's default view-transition animation
+ * includes a crossfade whenever the old/new boxes don't share the same
+ * aspect ratio, so it's disabled here for every element tagged
+ * `view-transition-class: vt-morph`. Covers same-document morphs
+ * (MediaModal's own <video>/<img> when opened from GaleriaCarrusel,
+ * HeroVideoModal/VideoSecundarioModal's own click-to-open, via
+ * document.startViewTransition) and the cross-document Portfolio/Home ->
+ * project hero-media morph (FullSizeVideo / HeroVideoModal's preview video,
+ * via @view-transition above) — the pseudo-element system is identical
+ * either way, so one rule covers it. GaleriaCarrusel's photo/video slides
+ * use `object-contain` (not `object-cover`) so the thumbnail and the
+ * modal's media element always show the same uncropped framing — no
+ * distortion/snap to disguise, so they share this rule rather than needing
+ * a crossfade of their own.
+ *
+ * fotografia.astro's grid is the one exception: it moved off View
+ * Transitions entirely to a clone+GSAP morph instead (see
+ * src/lib/cloneMorph.ts and MediaModal.astro's `thumbEl` path) — a single
+ * live element animating between the grid's cropped box and the modal's
+ * uncropped one can't ghost the way two competing View Transition
+ * snapshots can when their boxes don't match. Its thumbnails carry no
+ * view-transition-name at all, so they never reach this rule.
+ */
+::view-transition-old(.vt-morph),
+::view-transition-new(.vt-morph) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+
+/*
+ * "Force landscape" for the video/photo modals (MediaModal, HeroVideoModal,
+ * VideoSecundarioModal) on mobile: rather than requiring the user to
+ * physically turn their phone, a rotate button lets them flip the modal's
+ * content 90deg in place, filling the screen as if the device were in
+ * landscape. Works on any `fixed inset-0` overlay regardless of its own
+ * internal layout, since the whole box (buttons included) rotates as one
+ * unit around the viewport's center.
+ */
+.force-landscape {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  width: 100vh;
+  height: 100vw;
+  transform: translate(-50%, -50%) rotate(90deg);
+}

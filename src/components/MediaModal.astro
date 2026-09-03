@@ -1,0 +1,347 @@
+---
+interface Props {
+	id: string;
+}
+
+const { id } = Astro.props;
+
+const arrowPath = "M34.7831 7.00026L10.7831 26.1987L34.7831 48.0003";
+---
+
+<div
+	id={id}
+	class="media-modal fixed inset-0 z-50 hidden items-center justify-between gap-8 bg-ink/80 px-11 transition-[opacity,scale] duration-200 ease-out"
+	data-open="false"
+>
+	<button
+		type="button"
+		class="media-modal-prev flex shrink-0 cursor-pointer items-center justify-center text-cream"
+		aria-label="Anterior"
+	>
+		<svg viewBox="0 0 42 55" fill="none" class="h-10 w-auto" xmlns="http://www.w3.org/2000/svg">
+			<path d={arrowPath} stroke="currentColor" stroke-width="14" stroke-linecap="round"></path>
+		</svg>
+	</button>
+
+	<div class="media-modal-stage flex h-full max-h-[85vh] flex-1 items-center justify-center py-11">
+		<img
+			class="media-modal-img hidden max-h-full max-w-full object-contain"
+			alt=""
+			style="view-transition-class: vt-morph"
+		/>
+		<video
+			class="media-modal-video hidden max-h-full max-w-full object-contain"
+			muted
+			loop
+			playsinline
+			style="view-transition-class: vt-morph"
+		></video>
+	</div>
+
+	<button
+		type="button"
+		class="media-modal-next flex shrink-0 cursor-pointer items-center justify-center text-cream"
+		aria-label="Siguiente"
+	>
+		<svg viewBox="0 0 42 55" fill="none" class="h-10 w-auto rotate-180" xmlns="http://www.w3.org/2000/svg">
+			<path d={arrowPath} stroke="currentColor" stroke-width="14" stroke-linecap="round"></path>
+		</svg>
+	</button>
+
+	<button
+		type="button"
+		class="media-modal-rotate absolute top-4 right-4 z-20 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-cream/10 text-cream landscape:hidden md:hidden"
+		aria-label="Ver en horizontal"
+		aria-pressed="false"
+	>
+		<svg viewBox="0 0 24 24" fill="none" class="h-6 w-6" xmlns="http://www.w3.org/2000/svg">
+			<rect x="7" y="2" width="10" height="16" rx="1.5" stroke="currentColor" stroke-width="1.5"></rect>
+			<path d="M19 11a7 7 0 1 1-2.5-5.35" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+			<path d="M19 5v4h-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+		</svg>
+	</button>
+</div>
+
+<script>
+	import { cloneMorph } from "../lib/cloneMorph";
+
+	interface MediaModalItem {
+		type: "img" | "video";
+		src: string;
+		/** Shared view-transition-name with the thumbnail that opens this item (GaleriaCarrusel), for the native View Transitions morph. */
+		vtName?: string;
+		/** The grid thumbnail this item opens from (fotografia.astro), for the clone+GSAP morph instead. */
+		thumbEl?: HTMLImageElement;
+	}
+
+	interface MediaModalController {
+		open: (items: MediaModalItem[], startIndex: number) => void;
+		show: (nextIndex: number) => void;
+		close: () => void;
+	}
+
+	declare global {
+		interface HTMLElement {
+			mediaModal?: MediaModalController;
+		}
+	}
+
+	function initMediaModal() {
+		document.querySelectorAll<HTMLElement>(".media-modal").forEach((modal) => {
+			if (modal.mediaModal) return;
+
+			const stage = modal.querySelector<HTMLElement>(".media-modal-stage");
+			const img = modal.querySelector<HTMLImageElement>(".media-modal-img");
+			const video = modal.querySelector<HTMLVideoElement>(".media-modal-video");
+			const prevBtn = modal.querySelector<HTMLButtonElement>(".media-modal-prev");
+			const nextBtn = modal.querySelector<HTMLButtonElement>(".media-modal-next");
+			const rotateBtn = modal.querySelector<HTMLButtonElement>(".media-modal-rotate");
+			if (!stage || !img || !video) return;
+
+			rotateBtn?.addEventListener("click", () => {
+				const rotated = modal.classList.toggle("force-landscape");
+				rotateBtn.setAttribute("aria-pressed", String(rotated));
+			});
+
+			let items: MediaModalItem[] = [];
+			let index = 0;
+			// The vtName currently "handed off" from its grid thumbnail to the modal —
+			// tracked separately from `items[index]` so it stays correct no matter how
+			// the user got to the current item (open, or open + prev/next).
+			let activeVtName: string | null = null;
+
+			// Every thumbnail's view-transition-name defaults to "none" (see
+			// GaleriaCarrusel.astro) — it's only ever switched on for the ONE
+			// thumbnail participating in the current open/close transition, then
+			// switched back off immediately after. This keeps each transition down to
+			// a single named pair, never all N thumbnails at once (which would force
+			// the browser to snapshot every one of them).
+			function getThumb(vtName: string) {
+				return document.querySelector<HTMLElement>(`[data-vt-name="${CSS.escape(vtName)}"]`);
+			}
+
+			function activeEl() {
+				return items[index]?.type === "video" ? video : img;
+			}
+
+			// The clone-morph target rect for the modal's own <img> — it has no
+			// width/height attributes (sized purely by its natural dimensions via
+			// max-h-full/max-w-full), and render() just gave it a fresh `src`, so
+			// getBoundingClientRect() right now would return 0x0: the browser hasn't
+			// decoded it yet, even for a cached image, setting `src` never resolves
+			// synchronously. Wait for "load" before measuring if it hasn't already.
+			function activeElRect(): DOMRect | Promise<DOMRect> {
+				const el = activeEl()!;
+				if (el instanceof HTMLImageElement && !el.complete) {
+					return new Promise((resolve) => {
+						el.addEventListener("load", () => resolve(el.getBoundingClientRect()), { once: true });
+					});
+				}
+				return el.getBoundingClientRect();
+			}
+
+			function render() {
+				video!.pause();
+				video!.removeAttribute("src");
+				img!.removeAttribute("src");
+				video!.classList.add("hidden");
+				img!.classList.add("hidden");
+
+				const item = items[index];
+				if (!item) return;
+
+				if (item.type === "video") {
+					video!.src = item.src;
+					video!.classList.remove("hidden");
+					video!.play().catch(() => {});
+				} else {
+					img!.src = item.src;
+					img!.classList.remove("hidden");
+				}
+			}
+
+			function show(nextIndex: number) {
+				if (items.length === 0) return;
+
+				// No visible transition on prev/next (out of scope) — just keep the
+				// modal's own media element carrying the right name for whenever the
+				// user eventually closes, since thumbnails stay untouched (still "none")
+				// through this step either way. Items without a vtName (GaleriaCarrusel
+				// items and fotografia.astro's grid alike) never reach this branch's
+				// morph logic anyway — this is a no-op for them.
+				img!.style.viewTransitionName = "none";
+				video!.style.viewTransitionName = "none";
+
+				index = (nextIndex + items.length) % items.length;
+				render();
+
+				activeVtName = items[index]?.vtName ?? null;
+				if (activeVtName) activeEl()!.style.viewTransitionName = activeVtName;
+
+				modal.dispatchEvent(new CustomEvent("mediamodal:show", { detail: { index } }));
+			}
+
+			function withViewTransition(mutate: () => void, afterFinished?: () => void) {
+				if (typeof document.startViewTransition === "function") {
+					document.startViewTransition(mutate).finished.finally(() => afterFinished?.());
+				} else {
+					mutate();
+					afterFinished?.();
+				}
+			}
+
+			// Items with neither a vtName (GaleriaCarrusel) nor a thumbEl
+			// (fotografia.astro) get a plain CSS opacity+scale fade — shouldn't
+			// currently happen for either grid, but kept as a safety fallback.
+			function fadeModalIn() {
+				modal.style.opacity = "0";
+				modal.style.scale = "0.96";
+				modal.classList.remove("hidden");
+				modal.classList.add("flex");
+				// Double rAF: let the browser actually paint the opacity:0/scale:0.96
+				// state (while `hidden` was still applied, style changes don't paint)
+				// before flipping to the end state, or the transition has nothing to
+				// animate from.
+				requestAnimationFrame(() => {
+					requestAnimationFrame(() => {
+						modal.style.opacity = "1";
+						modal.style.scale = "1";
+					});
+				});
+			}
+
+			function fadeModalOut(afterHidden: () => void) {
+				modal.style.opacity = "0";
+				modal.style.scale = "0.96";
+				const onEnd = (event: Event) => {
+					if (event.target !== modal || (event as TransitionEvent).propertyName !== "opacity") return;
+					modal.removeEventListener("transitionend", onEnd);
+					modal.classList.add("hidden");
+					modal.classList.remove("flex");
+					modal.style.opacity = "";
+					modal.style.scale = "";
+					afterHidden();
+				};
+				modal.addEventListener("transitionend", onEnd);
+			}
+
+			function open(newItems: MediaModalItem[], startIndex: number) {
+				items = newItems;
+				index = startIndex;
+				const item = items[index];
+				const thumbEl = item?.thumbEl;
+				const vtName = item?.vtName ?? null;
+
+				if (thumbEl) {
+					// fotografia.astro: clone+GSAP morph, no View Transition involved.
+					modal.setAttribute("data-open", "true");
+					modal.classList.remove("hidden");
+					modal.classList.add("flex");
+					render();
+
+					// render() makes the real modal <img> visible (and, once loaded, at its
+					// full final size) immediately — hide it (opacity, not display/visibility,
+					// so it stays laid out and activeElRect can still measure it) until the
+					// clone has actually grown to occupy that same box, or the real photo
+					// shows through around the still-growing clone the whole time.
+					const real = activeEl()!;
+					real.style.opacity = "0";
+					cloneMorph(thumbEl, activeElRect).then(() => {
+						real.style.opacity = "";
+					});
+					return;
+				}
+
+				if (!vtName) {
+					// No thumbnail to morph from — plain fade.
+					modal.setAttribute("data-open", "true");
+					render();
+					fadeModalIn();
+					return;
+				}
+
+				const thumb = getThumb(vtName);
+
+				// Switch the clicked thumbnail's name on NOW, synchronously, before
+				// the transition's "old" snapshot is captured — every other
+				// thumbnail stays at "none" throughout.
+				if (thumb) thumb.style.viewTransitionName = vtName;
+
+				withViewTransition(() => {
+					modal.setAttribute("data-open", "true");
+					modal.classList.remove("hidden");
+					modal.classList.add("flex");
+					render();
+
+					if (thumb) thumb.style.viewTransitionName = "none";
+					activeEl()!.style.viewTransitionName = vtName;
+					activeVtName = vtName;
+				});
+			}
+
+			function close() {
+				const item = items[index];
+				const thumbEl = item?.thumbEl;
+
+				if (thumbEl) {
+					// Capture the currently-open media element's box and start the shrink
+					// clone BEFORE hiding the modal, then hide it immediately after — the
+					// thumbnail underneath is always visible in the grid (not part of this
+					// modal), so the clone can shrink onto it with nothing else needing to
+					// change mid-animation.
+					cloneMorph(activeEl()!, () => thumbEl.getBoundingClientRect());
+					modal.setAttribute("data-open", "false");
+					modal.classList.add("hidden");
+					modal.classList.remove("flex");
+					modal.classList.remove("force-landscape");
+					rotateBtn?.setAttribute("aria-pressed", "false");
+					video!.pause();
+					return;
+				}
+
+				const vtName = activeVtName;
+
+				if (!vtName) {
+					modal.setAttribute("data-open", "false");
+					modal.classList.remove("force-landscape");
+					rotateBtn?.setAttribute("aria-pressed", "false");
+					fadeModalOut(() => {});
+					return;
+				}
+
+				const thumb = getThumb(vtName);
+
+				withViewTransition(
+					() => {
+						modal.setAttribute("data-open", "false");
+						modal.classList.add("hidden");
+						modal.classList.remove("flex");
+						modal.classList.remove("force-landscape");
+						rotateBtn?.setAttribute("aria-pressed", "false");
+						video!.pause();
+						img!.style.viewTransitionName = "none";
+						video!.style.viewTransitionName = "none";
+						if (thumb) thumb.style.viewTransitionName = vtName;
+					},
+					() => {
+						// Cleanup once the transition has fully settled: the thumbnail
+						// goes back to "none" too, so nothing is left named at rest.
+						if (thumb) thumb.style.viewTransitionName = "none";
+						activeVtName = null;
+					}
+				);
+			}
+
+			prevBtn?.addEventListener("click", () => show(index - 1));
+			nextBtn?.addEventListener("click", () => show(index + 1));
+
+			modal.addEventListener("click", (event) => {
+				if (event.target === modal || event.target === stage) close();
+			});
+
+			modal.mediaModal = { open, show, close };
+		});
+	}
+
+	initMediaModal();
+</script>

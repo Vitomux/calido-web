@@ -1,0 +1,192 @@
+---
+import MediaModal from "./MediaModal.astro";
+import { withBase } from "../lib/paths";
+
+interface Props {
+	items: string[];
+	slug: string;
+}
+
+const { items, slug } = Astro.props;
+
+function isVideo(archivo: string) {
+	return /\.mp4$/i.test(archivo);
+}
+
+function archivoUrl(archivo: string) {
+	return withBase(`/trabajos/${slug}/galeria/${encodeURIComponent(archivo)}`);
+}
+
+const arrowPath = "M34.7831 7.00026L10.7831 26.1987L34.7831 48.0003";
+const modalId = `galeria-carrusel-modal-${slug}`;
+---
+
+<div class="galeria-carrusel relative isolate flex flex-col items-center overflow-hidden bg-ink py-26.25">
+	<p
+		aria-hidden="true"
+		class="galeria-carrusel-title z-0 w-full text-center text-hero font-akzidenz-extend font-black whitespace-nowrap uppercase text-cream"
+	>
+		Cálido cine
+	</p>
+
+	<div class="relative z-10 -mt-21 flex w-full items-center justify-between px-11">
+		<button
+			type="button"
+			class="galeria-carrusel-prev flex shrink-0 cursor-pointer items-center justify-center text-cream"
+			aria-label="Anterior"
+		>
+			<svg viewBox="0 0 42 55" fill="none" class="h-10 w-auto" xmlns="http://www.w3.org/2000/svg">
+				<path d={arrowPath} stroke="currentColor" stroke-width="14" stroke-linecap="round"></path>
+			</svg>
+		</button>
+
+		<div class="relative aspect-video w-[62%] max-w-296.75 overflow-hidden" data-modal-id={modalId}>
+			{
+				items.map((archivo, i) => (
+					<div
+						class="galeria-carrusel-slide absolute inset-0 flex cursor-pointer items-center justify-center"
+						data-slide-index={i}
+						data-slide-type={isVideo(archivo) ? "video" : "img"}
+						data-slide-src={archivoUrl(archivo)}
+						class:list={[i !== 0 && "hidden"]}
+					>
+						{isVideo(archivo) ? (
+							<video
+								src={archivoUrl(archivo)}
+								muted
+								loop
+								playsinline
+								class="max-h-full max-w-full object-contain"
+								data-vt-name={`${modalId}-slide-${i}`}
+								style={{ viewTransitionName: "none", viewTransitionClass: "vt-morph" }}
+							/>
+						) : (
+							<img
+								src={archivoUrl(archivo)}
+								alt=""
+								class="max-h-full max-w-full object-contain"
+								data-vt-name={`${modalId}-slide-${i}`}
+								style={{ viewTransitionName: "none", viewTransitionClass: "vt-morph" }}
+							/>
+						)}
+					</div>
+				))
+			}
+		</div>
+
+		<button
+			type="button"
+			class="galeria-carrusel-next flex shrink-0 cursor-pointer items-center justify-center text-cream"
+			aria-label="Siguiente"
+		>
+			<svg viewBox="0 0 42 55" fill="none" class="h-10 w-auto rotate-180" xmlns="http://www.w3.org/2000/svg">
+				<path d={arrowPath} stroke="currentColor" stroke-width="14" stroke-linecap="round"></path>
+			</svg>
+		</button>
+	</div>
+</div>
+
+<MediaModal id={modalId} />
+
+<script>
+	function initGaleriaCarrusel() {
+		document.querySelectorAll<HTMLElement>(".galeria-carrusel").forEach((carousel) => {
+		const slides = [...carousel.querySelectorAll<HTMLElement>(".galeria-carrusel-slide")];
+		const prevBtn = carousel.querySelector<HTMLButtonElement>(".galeria-carrusel-prev");
+		const nextBtn = carousel.querySelector<HTMLButtonElement>(".galeria-carrusel-next");
+		if (slides.length === 0) return;
+
+		const stageWrapper = carousel.querySelector<HTMLElement>("[data-modal-id]");
+		const modalId = stageWrapper?.dataset.modalId;
+
+		const modalItems = slides.map((slide) => ({
+			type: (slide.dataset.slideType as "img" | "video") ?? "img",
+			src: slide.dataset.slideSrc ?? "",
+			vtName: slide.querySelector<HTMLElement>("[data-vt-name]")?.dataset.vtName,
+		}));
+
+		let index = 0;
+
+		// Stagger each slide's video instead of letting every one of them try
+		// to decode+play its first frame in the same instant on page load —
+		// with the native `autoplay` attribute removed, we control this
+		// directly. A perf trace showed several videos loading/decoding
+		// simultaneously right as the destination page mounts, competing with
+		// the page's own commit/paint work during the Portfolio -> project
+		// transition.
+		slides.forEach((slide, i) => {
+			const slideVideo = slide.querySelector<HTMLVideoElement>("video");
+			if (!slideVideo) return;
+			setTimeout(() => {
+				if (i === index) {
+					slideVideo.play().catch(() => {});
+				} else {
+					slideVideo.pause();
+				}
+			}, i * 100);
+		});
+
+		function syncSlide(newIndex: number) {
+			slides[index].classList.add("hidden");
+			slides[index].querySelector("video")?.pause();
+
+			index = (newIndex + slides.length) % slides.length;
+
+			slides[index].classList.remove("hidden");
+			slides[index].querySelector("video")?.play().catch(() => {});
+		}
+
+		function show(nextIndex: number) {
+			syncSlide(nextIndex);
+
+			const modal = modalId ? document.getElementById(modalId) : null;
+			if (modal?.getAttribute("data-open") === "true") {
+				modal.mediaModal?.show(index);
+			}
+		}
+
+		prevBtn?.addEventListener("click", () => show(index - 1));
+		nextBtn?.addEventListener("click", () => show(index + 1));
+
+		const modalEl = modalId ? document.getElementById(modalId) : null;
+		modalEl?.addEventListener("mediamodal:show", ((event: CustomEvent<{ index: number }>) => {
+			if (event.detail.index === index) return;
+			syncSlide(event.detail.index);
+		}) as EventListener);
+
+		slides.forEach((slide, i) => {
+			slide.addEventListener("click", () => {
+				const modal = modalId ? document.getElementById(modalId) : null;
+				modal?.mediaModal?.open(modalItems, i);
+			});
+		});
+	});
+	}
+
+	function fitTitles() {
+		document.querySelectorAll<HTMLElement>(".galeria-carrusel-title").forEach((title) => {
+			const container = title.parentElement;
+			if (!container) return;
+
+			const baseFontSize = title.dataset.baseFontSize
+				? parseFloat(title.dataset.baseFontSize)
+				: parseFloat(getComputedStyle(title).fontSize);
+			title.dataset.baseFontSize = String(baseFontSize);
+
+			title.style.fontSize = `${baseFontSize}px`;
+			const naturalWidth = title.scrollWidth;
+			if (naturalWidth === 0) return;
+
+			const scale = container.clientWidth / naturalWidth;
+			title.style.fontSize = `${baseFontSize * scale}px`;
+		});
+	}
+
+	function init() {
+		initGaleriaCarrusel();
+		document.fonts.ready.then(fitTitles);
+	}
+
+	init();
+	window.addEventListener("resize", fitTitles);
+</script>

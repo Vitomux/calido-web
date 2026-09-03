@@ -1,0 +1,64 @@
+---
+import { withBase } from "../lib/paths";
+
+interface Props {
+	videoSrc: string;
+	titulo: string;
+	artista?: string;
+	slug: string;
+}
+
+const { videoSrc, titulo, artista, slug } = Astro.props;
+const label = artista ? `${titulo} - ${artista}` : titulo;
+const vtName = `hero-media-${slug}`;
+---
+
+<a
+	href={withBase(`/trabajos/${slug}`)}
+	aria-label={label}
+	data-header-surface="video"
+	class="fullsize-video group relative block h-screen w-full cursor-none overflow-hidden"
+>
+	<video
+		src={videoSrc}
+		autoplay
+		muted
+		loop
+		playsinline
+		class="absolute inset-0 h-full w-full object-cover"
+		data-vt-name={vtName}
+		style={{ viewTransitionName: vtName, viewTransitionClass: "vt-morph" }}
+	></video>
+
+	<span
+		class="fullsize-video-label pointer-events-none absolute top-0 left-0 z-10 hidden -translate-x-1/2 -translate-y-1/2 text-din-label font-din whitespace-nowrap text-cream"
+		aria-hidden="true"
+	>
+		{label}
+	</span>
+</a>
+
+<script>
+	function initFullSizeVideo() {
+		document.querySelectorAll<HTMLAnchorElement>(".fullsize-video").forEach((container) => {
+			const followerLabel = container.querySelector<HTMLElement>(".fullsize-video-label");
+			if (!followerLabel) return;
+
+			container.addEventListener("mouseenter", () => {
+				followerLabel.classList.remove("hidden");
+			});
+
+			container.addEventListener("mousemove", (event) => {
+				const rect = container.getBoundingClientRect();
+				followerLabel.style.left = `${event.clientX - rect.left}px`;
+				followerLabel.style.top = `${event.clientY - rect.top}px`;
+			});
+
+			container.addEventListener("mouseleave", () => {
+				followerLabel.classList.add("hidden");
+			});
+		});
+	}
+
+	initFullSizeVideo();
+</script>

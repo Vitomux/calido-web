@@ -1,0 +1,84 @@
+---
+import DrawerMenu from "./DrawerMenu.astro";
+import { withBase } from "../lib/paths";
+---
+
+<header
+	id="site-header"
+	data-variant="onSurface"
+	class="group fixed inset-x-0 top-0 z-40 flex items-center justify-between pr-3 md:px-11 md:py-5 transition-colors duration-200"
+>
+	<a href={withBase("/")} class="relative block h-16 w-64 shrink-0" aria-label="Ir al inicio">
+		<img
+			src={withBase("/branding/logo-dark.png")}
+			alt="Cálido cine"
+			class="hidden h-full w-full object-contain object-left group-data-[variant=onSurface]:block group-data-[variant=onSurfaceDark]:block"
+		/>
+		<img
+			src={withBase("/branding/logo-light.png")}
+			alt="Cálido cine"
+			class="hidden h-full w-full object-contain object-left group-data-[variant=onVideo]:block"
+		/>
+	</a>
+
+	<button
+		type="button"
+		id="header-menu-btn"
+		aria-label="Abrir menú"
+		class="w-5 shrink-0 cursor-pointer text-black group-data-[variant=onVideo]:text-white group-data-[variant=onSurfaceDark]:text-apricot"
+	>
+		<svg viewBox="0 0 47 42.5936" fill="none" class="h-full w-full" xmlns="http://www.w3.org/2000/svg">
+			<path
+				d="M0.0000616639 3.29681H47M0.0000616639 21.1615H47M0 39.2968H46.9999"
+				stroke="currentColor"
+				stroke-width="6.59361"></path>
+		</svg>
+	</button>
+</header>
+
+<DrawerMenu />
+
+<script>
+	const header = document.getElementById("site-header");
+	const menuBtn = document.getElementById("header-menu-btn");
+
+	menuBtn?.addEventListener("click", () => {
+		document.getElementById("drawer-menu")?.setAttribute("data-open", "true");
+	});
+
+	let observer: IntersectionObserver | null = null;
+
+	function watchSurfaceSections() {
+		if (!header) return;
+
+		observer?.disconnect();
+
+		const headerHeight = header.offsetHeight;
+		const lineFromBottom = Math.max(window.innerHeight - headerHeight - 1, 0);
+
+		const variantForSurface: Record<string, string> = {
+			video: "onVideo",
+			solid: "onSurface",
+			dark: "onSurfaceDark",
+		};
+
+		observer = new IntersectionObserver(
+			(entries) => {
+				for (const entry of entries) {
+					if (entry.isIntersecting) {
+						const surface = entry.target.getAttribute("data-header-surface") ?? "";
+						header.setAttribute("data-variant", variantForSurface[surface] ?? "onSurface");
+					}
+				}
+			},
+			{ rootMargin: `-${headerHeight}px 0px -${lineFromBottom}px 0px`, threshold: 0 }
+		);
+
+		document.querySelectorAll("[data-header-surface]").forEach((section) => {
+			observer?.observe(section);
+		});
+	}
+
+	watchSurfaceSections();
+	window.addEventListener("resize", watchSurfaceSections);
+</script>

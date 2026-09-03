@@ -1,0 +1,31 @@
+---
+import Layout from "../layouts/Layout.astro";
+import WorkListItem from "../components/WorkListItem.astro";
+import { getTrabajosOrdenados } from "../lib/trabajos";
+import { withBase } from "../lib/paths";
+
+const trabajos = await getTrabajosOrdenados();
+
+function clipPreviewUrl(slug: string, galeria: string[]) {
+	const clip = galeria.find((archivo) => /\.mp4$/i.test(archivo));
+	return clip ? withBase(`/trabajos/${slug}/galeria/${encodeURIComponent(clip)}`) : "";
+}
+---
+
+<Layout>
+	<main data-header-surface="solid" class="min-h-screen bg-cream px-11 pt-40.75 pb-44">
+		<h1 class="mb-18 text-portfolio-title font-akzidenz-extend font-black uppercase text-ink">Portfolio</h1>
+
+		<div>
+			{
+				trabajos.map((trabajo) => (
+					<WorkListItem
+						titulo={trabajo.data.titulo}
+						slug={trabajo.id}
+						clipPreview={clipPreviewUrl(trabajo.id, trabajo.data.galeria)}
+					/>
+				))
+			}
+		</div>
+	</main>
+</Layout>

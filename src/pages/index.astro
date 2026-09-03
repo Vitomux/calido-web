@@ -1,11 +1,38 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+import { getCollection, type CollectionEntry } from "astro:content";
+import Layout from "../layouts/Layout.astro";
+import FullSizeVideo from "../components/FullSizeVideo.astro";
+import { withBase } from "../lib/paths";
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+const ORDEN_HOME = [
+	"super-chatarra",
+	"alsina-carson-todo-me-extraña",
+	"uber-drive",
+	"por-los-colores",
+	"cuanto-dolio",
+];
+
+const destacadosPorSlug = new Map(
+	(await getCollection("trabajos", ({ data }) => data.destacado)).map((trabajo) => [
+		trabajo.id,
+		trabajo,
+	])
+);
+
+const trabajosHome = ORDEN_HOME.map((slug) => destacadosPorSlug.get(slug)).filter(
+	(trabajo): trabajo is CollectionEntry<"trabajos"> => Boolean(trabajo)
+);
+
+function getClipSrc(trabajo: CollectionEntry<"trabajos">) {
+	const clip = trabajo.data.galeria.find((archivo) => /\.mp4$/i.test(archivo));
+	return clip ? withBase(encodeURI(`/trabajos/${trabajo.id}/galeria/${clip}`)) : "";
+}
 ---
 
 <Layout>
-	<Welcome />
+	{
+		trabajosHome.map((trabajo) => (
+			<FullSizeVideo videoSrc={getClipSrc(trabajo)} titulo={trabajo.data.titulo} slug={trabajo.id} />
+		))
+	}
 </Layout>

@@ -1,0 +1,156 @@
+---
+import { withBase } from "../lib/paths";
+
+interface Props {
+	titulo: string;
+	slug: string;
+	clipPreview: string;
+}
+
+const { titulo, slug, clipPreview } = Astro.props;
+---
+
+<a
+	href={withBase(`/trabajos/${slug}`)}
+	data-slug={slug}
+	class="work-list-item relative flex min-h-34 w-full cursor-pointer items-center border-t-4 border-b-4 border-t-black border-b-transparent py-8 pr-4 text-ink transition-colors hover:border-b-black hover:bg-ink hover:text-cream"
+>
+	<div class="flex w-full items-center justify-between gap-4 px-8">
+		<p class="min-w-0 flex-1 text-work font-din font-bold whitespace-normal md:whitespace-nowrap">{titulo}</p>
+		<div class="flex size-8.375 shrink-0 -rotate-45 items-center justify-center">
+			<svg viewBox="0 0 51 45" fill="currentColor" class="h-12 w-12">
+				<path
+					d="M49.4975 24.2132C50.669 23.0416 50.669 21.1421 49.4975 19.9706L30.4056 0.878681C29.234 -0.292892 27.3345 -0.292892 26.163 0.878681C24.9914 2.05025 24.9914 3.94975 26.163 5.12132L43.1335 22.0919L26.163 39.0624C24.9914 40.234 24.9914 42.1335 26.163 43.3051C27.3345 44.4767 29.234 44.4767 30.4056 43.3051L49.4975 24.2132ZM0 22.0919V25.0919H47.3762V22.0919V19.0919H0V22.0919Z"
+				></path>
+			</svg>
+		</div>
+	</div>
+
+	{
+		clipPreview && (
+			<div
+				class="work-list-item-video pointer-events-none absolute top-0 left-0 z-10 hidden h-48 w-64 -translate-x-1/2 -translate-y-1/2"
+				aria-hidden="true"
+			>
+				<video class="block h-full w-full object-cover" src={clipPreview} muted loop playsinline />
+			</div>
+		)
+	}
+</a>
+
+<script>
+	import { gsap } from "gsap";
+
+	// Replaces the native View Transitions morph for this Portfolio -> project
+	// hero-media pair: instead of the browser matching two differently-sized/
+	// cropped snapshots (the source of the ghosting artifact), we clone the
+	// already-playing hover-preview <video> at its exact on-screen rect, animate
+	// that single clone to fill the viewport, then do a real navigation. Only one
+	// element is ever animating, so there's nothing to mismatch.
+	function playCloneMorph(item: HTMLAnchorElement, video: HTMLVideoElement, href: string) {
+		const rect = video.getBoundingClientRect();
+
+		const clone = video.cloneNode(false) as HTMLVideoElement;
+		clone.id = "hero-clone-outgoing";
+		clone.currentTime = video.currentTime;
+		clone.muted = true;
+		clone.style.position = "fixed";
+		clone.style.top = `${rect.top}px`;
+		clone.style.left = `${rect.left}px`;
+		clone.style.width = `${rect.width}px`;
+		clone.style.height = `${rect.height}px`;
+		clone.style.objectFit = "cover";
+		clone.style.zIndex = "9999";
+		clone.style.margin = "0";
+		clone.style.pointerEvents = "none";
+
+		document.body.appendChild(clone);
+		clone.play().catch(() => {});
+
+		// Safety net matching the destination-side one in Layout.astro's <head> script:
+		// if navigation never actually happens for some reason (blocked, cancelled, JS
+		// error further down), this clone can't cover Portfolio forever.
+		setTimeout(() => clone.remove(), 3000);
+
+		let navigated = false;
+		const goToProject = () => {
+			if (navigated) return;
+			navigated = true;
+
+			// Hand the still-visible, screen-covering clone off to the destination page
+			// (same sessionStorage handoff pattern as the Drawer's "preopen" mechanism):
+			// a blocking inline script in Layout.astro's <head> recreates it there before
+			// first paint, so it keeps covering the screen while the real page mounts
+			// underneath, instead of dropping to a blank/loading frame during navigation.
+			// Slug comes from the anchor's own data-slug (server-rendered, literal), not
+			// parsed out of `href` — reading `.href` gives the browser's resolved,
+			// percent-encoded URL, which for a slug with non-ASCII characters (e.g.
+			// "alsina-carson-todo-me-extraña") no longer matches HeroVideoModal's own
+			// literal `data-slug`, so the destination-side reveal never fires and the
+			// clone got stuck there until the safety timeout force-removed it.
+			try {
+				sessionStorage.setItem(
+					"heroCloneLoading",
+					JSON.stringify({ slug: item.dataset.slug, src: clone.currentSrc || clone.src, time: clone.currentTime })
+				);
+			} catch {}
+
+			window.location.href = href;
+		};
+
+		gsap.to(clone, {
+			top: 0,
+			left: 0,
+			width: "100vw",
+			height: "100vh",
+			duration: 0.45,
+			ease: "power2.inOut",
+			onComplete: goToProject,
+		});
+	}
+
+	function initWorkListItem() {
+		document.querySelectorAll<HTMLAnchorElement>(".work-list-item").forEach((item) => {
+			const wrapper = item.querySelector<HTMLElement>(".work-list-item-video");
+			const video = wrapper?.querySelector<HTMLVideoElement>("video");
+			if (!wrapper || !video) return;
+
+			item.addEventListener("mouseenter", () => {
+				wrapper.classList.remove("hidden");
+				video.play().catch(() => {});
+			});
+
+			item.addEventListener("mousemove", (event) => {
+				const rect = item.getBoundingClientRect();
+				wrapper.style.left = `${event.clientX - rect.left}px`;
+				wrapper.style.top = `${event.clientY - rect.top}px`;
+			});
+
+			item.addEventListener("mouseleave", () => {
+				wrapper.classList.add("hidden");
+				video.pause();
+			});
+
+			item.addEventListener("click", (event) => {
+				// Let modifier/middle clicks (new tab, new window, etc.) through untouched.
+				if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+				const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+				// Only animate if the hover preview is actually visible — on touch/keyboard
+				// activation it never was, and there's no thumbnail rect worth animating from.
+				if (reduceMotion || wrapper.classList.contains("hidden")) return;
+
+				try {
+					event.preventDefault();
+					playCloneMorph(item, video, item.href);
+				} catch {
+					// Any failure in the animation setup falls back to a normal navigation
+					// instead of leaving the click silently dead.
+					window.location.href = item.href;
+				}
+			});
+		});
+	}
+
+	initWorkListItem();
+</script>

@@ -1,0 +1,112 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout>
+	<section
+		data-header-surface="solid"
+		class="flex w-full flex-col items-center justify-center gap-16 bg-cream px-6 py-12 md:px-16 md:py-24"
+	>
+		<div class="flex w-full flex-col gap-16 md:max-w-340">
+			<h1 class="text-contacto-title font-akzidenz-extend font-black uppercase text-ink my-16">Contacto</h1>
+
+			<div class="block md:flex md:flex-row md:justify-end">
+				<form
+					id="contact-form"
+					novalidate
+					class="flex w-full flex-col gap-12 md:w-4/5"
+				>
+					<div class="hidden" aria-hidden="true">
+						<label for="website">No completar este campo</label>
+						<input type="text" id="website" name="website" tabindex="-1" autocomplete="off" />
+					</div>
+
+					<div class="flex flex-col gap-10">
+						<input
+							type="text"
+							name="nombre"
+							id="nombre"
+							required
+							placeholder="Nombre"
+							class="border-b border-ink/20 bg-transparent pb-3 text-contacto-field font-din font-bold uppercase text-ink placeholder:text-ink/40 transition-colors focus:border-ink focus:placeholder:text-ink focus:outline-none"
+						/>
+						<input
+							type="email"
+							name="email"
+							id="email"
+							required
+							placeholder="Mail"
+							class="border-b border-ink/20 bg-transparent pb-3 text-contacto-field font-din font-bold uppercase text-ink placeholder:text-ink/40 transition-colors focus:border-ink focus:placeholder:text-ink focus:outline-none"
+						/>
+						<textarea
+							name="mensaje"
+							id="mensaje"
+							required
+							placeholder="Mensaje"
+							rows="1"
+							class="resize-none border-b border-ink/20 bg-transparent pb-3 text-contacto-field font-din font-bold uppercase text-ink placeholder:text-ink/40 transition-colors focus:border-ink focus:placeholder:text-ink focus:outline-none"
+						></textarea>
+					</div>
+
+					<div class="flex flex-col items-end gap-4">
+						<button
+							type="submit"
+							id="submit-btn"
+							class="cursor-pointer text-contacto-button font-akzidenz-extend font-black uppercase text-ink transition-colors hover:text-apricot disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-ink"
+						>
+							Enviar
+						</button>
+						<p id="form-status" class="hidden text-right text-din-label font-archivo text-ink" role="status" aria-live="polite">
+						</p>
+					</div>
+				</form>
+			</div>
+		</div>
+	</section>
+</Layout>
+
+<script>
+	import { withBase } from "../lib/paths";
+
+	function initContactForm() {
+		const form = document.getElementById("contact-form") as HTMLFormElement | null;
+		const submitBtn = document.getElementById("submit-btn") as HTMLButtonElement | null;
+		const status = document.getElementById("form-status");
+
+		form?.addEventListener("submit", async (event) => {
+			event.preventDefault();
+			if (!submitBtn || !status) return;
+
+			const honeypot = (form.elements.namedItem("website") as HTMLInputElement | null)?.value ?? "";
+			if (honeypot.trim() !== "") return;
+
+			submitBtn.disabled = true;
+			const originalLabel = submitBtn.textContent;
+			submitBtn.textContent = "Enviando...";
+			status.classList.add("hidden");
+
+			try {
+				const response = await fetch(withBase("/contact-handler.php"), {
+					method: "POST",
+					body: new FormData(form),
+				});
+				const data = await response.json();
+
+				status.textContent = data.message;
+				status.classList.remove("hidden");
+
+				if (data.success) {
+					form.reset();
+				}
+			} catch {
+				status.textContent = "No se pudo enviar el mensaje. Intentá de nuevo más tarde.";
+				status.classList.remove("hidden");
+			} finally {
+				submitBtn.disabled = false;
+				submitBtn.textContent = originalLabel;
+			}
+		});
+	}
+
+	initContactForm();
+</script>

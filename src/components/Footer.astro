@@ -1,0 +1,42 @@
+---
+import { withBase } from "../lib/paths";
+---
+
+<footer
+	data-header-surface="video"
+	class="w-full flex flex-col items-center gap-4.5 pt-12.5 pb-7 rounded-xs border border-ghostly-white bg-ink font-archivo text-white"
+>
+	<div class="w-full flex items-center justify-between px-11">
+		<div class="relative w-6.5 h-7.5 overflow-hidden">
+			<img
+				src={withBase("/images/logo-calido.png")}
+				alt="Cálido"
+				class="absolute max-w-none left-[-47.94%] top-[-43.76%] w-[512.07%] h-[169.85%]"
+			/>
+		</div>
+		<a
+			href="#"
+			target="_blank"
+			rel="noopener noreferrer"
+			class="text-footer font-semibold">youtube</a
+		>
+	</div>
+
+	<div class="w-full flex items-center justify-between px-11 text-footer font-semibold">
+		<a href="mailto:calidocine@gmail.com" class="w-53.75">calidocine@gmail.com</a>
+		<a href="#" target="_blank" rel="noopener noreferrer" class="text-right">instagram</a>
+	</div>
+
+	<div class="relative w-full aspect-1920/771 overflow-hidden">
+		<img
+			src="/images/logo-calido.png"
+			alt="Cálido"
+			class="absolute max-w-none left-[-57.18%] top-[-24.8%] w-[174.14%] h-[163.49%]"
+		/>
+	</div>
+
+	<div class="w-full flex items-center justify-between px-11 text-footer font-normal">
+		<p class="w-89.5">Design &amp; developed by Enciende Studio</p>
+		<p class="text-right w-114.5">2026</p>
+	</div>
+</footer>

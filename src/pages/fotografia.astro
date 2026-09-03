@@ -1,0 +1,99 @@
+---
+import fs from "node:fs";
+import path from "node:path";
+import { imageSizeFromFile } from "image-size/fromFile";
+import Layout from "../layouts/Layout.astro";
+import MediaModal from "../components/MediaModal.astro";
+import { withBase } from "../lib/paths";
+
+const fotografiaDir = path.join(process.cwd(), "public", "fotografia");
+
+function fotoUrl(archivo: string) {
+	return withBase(`/fotografia/${encodeURIComponent(archivo)}`);
+}
+
+const archivos: string[] = fs.existsSync(fotografiaDir)
+	? fs
+			.readdirSync(fotografiaDir)
+			.filter((archivo) => /\.(jpe?g|png|gif|webp)$/i.test(archivo))
+			.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+	: [];
+
+interface Foto {
+	archivo: string;
+	width: number;
+	height: number;
+}
+
+const fotos: Foto[] = await Promise.all(
+	archivos.map(async (archivo) => {
+		const { width, height } = await imageSizeFromFile(path.join(fotografiaDir, archivo));
+		return { archivo, width: width ?? 1, height: height ?? 1 };
+	})
+);
+
+function chunk<T>(items: T[], size: number): T[][] {
+	const filas: T[][] = [];
+	for (let i = 0; i < items.length; i += size) {
+		filas.push(items.slice(i, i + size));
+	}
+	return filas;
+}
+
+const filas = chunk<Foto>(fotos, 3);
+---
+
+<Layout>
+	<section data-header-surface="solid" class="relative bg-cream">
+		<div class="pointer-events-none sticky top-1/2 z-0 h-0 overflow-visible select-none" aria-hidden="true">
+			<h2 class="-translate-y-1/2 text-center text-fotografia-title font-akzidenz-extend font-black uppercase text-ink">
+				Fotografía
+			</h2>
+		</div>
+
+		<div class="relative z-10 flex flex-col gap-y-31.5 px-11 py-24 my-124">
+			{
+				filas.map((fila) => (
+					<div class="flex flex-col items-center gap-10 md:flex-row">
+						{fila.map((foto, i) => (
+							<button
+								type="button"
+								class="fotografia-item h-130 min-w-0 flex-1 cursor-pointer"
+								style={{ aspectRatio: `${foto.width} / ${foto.height}` }}
+								data-src={fotoUrl(foto.archivo)}
+								aria-label={`Ver foto ${i + 1}`}
+							>
+								<img
+									src={fotoUrl(foto.archivo)}
+									alt=""
+									class="pointer-events-none block h-full w-full object-cover"
+								/>
+							</button>
+						))}
+					</div>
+				))
+			}
+		</div>
+	</section>
+
+	<MediaModal id="fotografia-modal" />
+</Layout>
+
+<script>
+	function initFotografiaGrid() {
+		const items = [...document.querySelectorAll<HTMLElement>(".fotografia-item")].map((el) => ({
+			type: "img" as const,
+			src: el.dataset.src ?? "",
+			thumbEl: el.querySelector<HTMLImageElement>("img") ?? undefined,
+		}));
+
+		document.querySelectorAll<HTMLElement>(".fotografia-item").forEach((el, i) => {
+			el.addEventListener("click", () => {
+				const modal = document.getElementById("fotografia-modal");
+				modal?.mediaModal?.open(items, i);
+			});
+		});
+	}
+
+	initFotografiaGrid();
+</script>

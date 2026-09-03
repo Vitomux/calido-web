@@ -1,0 +1,105 @@
+---
+import { withBase } from "../lib/paths";
+
+interface NavItem {
+	label: string;
+	href: string;
+}
+
+const navItems: NavItem[] = [
+	{ label: "Nosotros", href: "/nosotros" },
+	{ label: "Portfolio", href: "/portfolio" },
+	{ label: "Fotografía", href: "/fotografia" },
+	{ label: "Contacto", href: "/contacto" },
+];
+---
+
+<div
+id="drawer-menu"
+data-open="false"
+class="fixed inset-0 z-50 flex flex-col overflow-y-auto rounded-xs border border-ghostly-white bg-ink px-11 pt-9 font-archivo translate-x-full pointer-events-none transition-transform duration-300 ease-out data-[open=true]:translate-x-0 data-[open=true]:pointer-events-auto justify-between"
+>
+<div class="flex h-0.5rem items-start justify-end">
+	<button
+		type="button"
+		id="drawer-menu-close"
+		aria-label="Cerrar menú"
+		class="h-4.75 w-5.25 shrink-0 cursor-pointer"
+	>
+		<img src={withBase("/images/icon-close.svg")} alt="" class="h-full w-full transition-all hover:color-apricot" />
+	</button>
+</div>
+
+	<nav aria-label="Navegación principal">
+	<ul class="flex flex-col">
+		{
+				navItems.map((item) => (
+					<li class="not-last:-mb-5.5">
+						<a
+							href={withBase(item.href)}
+							class="flex cursor-pointer text-menu font-akzidenz-extend font-black uppercase tracking-wide text-cream
+							mb-6
+							md:mb-0
+							md:tracking-normal
+							transition-colors hover:text-apricot "
+						>
+							{item.label}
+						</a>
+					</li>
+				))
+			}
+		</ul>
+	</nav>
+
+<div class="flex flex-row w-full items-center justify-between align-bottom border-t-4 border-white py-11.5 text-footer font-semibold lowercase text-white"
+>
+	<a href="https://www.youtube.com/@calido_cine" target="_blank" rel="noopener noreferrer" class="transition-all hover:text-apricot">youtube</a>
+	<a href="http://instagram.com/calido.cine/" target="_blank" rel="noopener noreferrer" class="text-right transition-all hover:text-apricot ">instagram</a>
+</div>
+
+</div>
+
+<script>
+	const drawer = document.getElementById("drawer-menu");
+	const closeBtn = document.getElementById("drawer-menu-close");
+
+	closeBtn?.addEventListener("click", () => {
+		drawer?.setAttribute("data-open", "false");
+	});
+
+	// Nav links navigate 100% normally (no preventDefault) — the only extra
+	// step is flagging sessionStorage so the destination page knows to
+	// render the Drawer already open (see the .drawer-preopen mechanism).
+	// The Drawer itself is deliberately left open here, through the unload:
+	// it should still be covering the screen when the new page's first
+	// frame paints, not mid-close.
+	drawer?.querySelectorAll("nav a").forEach((link) => {
+		link.addEventListener("click", () => {
+			try {
+				sessionStorage.setItem("drawerLoading", "1");
+			} catch (e) {}
+		});
+	});
+
+	// Reveal-on-load: if this page was reached via a Drawer-driven
+	// navigation, <html> already carries `drawer-preopen` (set by the
+	// blocking inline script in Layout.astro's <head>, before first paint)
+	// and the Drawer is showing open with no transition. Once this page's
+	// DOM is ready, drop the override — data-open never left "false", so
+	// removing it alone reveals the Drawer's normal closed state, animating
+	// via its existing close transition now that transitions are re-enabled.
+	if (document.documentElement.classList.contains("drawer-preopen")) {
+		const revealPage = () => {
+			document.documentElement.classList.remove("drawer-preopen");
+			try {
+				sessionStorage.removeItem("drawerLoading");
+			} catch (e) {}
+		};
+
+		if (document.readyState === "loading") {
+			document.addEventListener("DOMContentLoaded", revealPage, { once: true });
+		} else {
+			revealPage();
+		}
+	}
+</script>

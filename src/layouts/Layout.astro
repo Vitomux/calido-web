@@ -1,15 +1,94 @@
+---
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { withBase } from '../lib/paths';
+
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+---
 <!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
+		<script is:inline define:vars={{ basePath }}>
+			// Must run synchronously, before the Drawer's own DOM/CSS paints —
+			// see DrawerMenu.astro and the .drawer-preopen rule in global.css.
+			try {
+				if (sessionStorage.getItem("drawerLoading")) {
+					document.documentElement.classList.add("drawer-preopen");
+				}
+			} catch (e) {}
+
+			// Same handoff pattern, for the WorkListItem -> HeroVideoModal clone morph
+			// (see WorkListItem.astro): recreate the full-viewport video clone here,
+			// synchronously, before this page's own content has painted, so it keeps
+			// covering the screen with zero gap while the real page mounts underneath.
+			// HeroVideoModal.astro fades it out and removes it once ready.
+			try {
+				var heroCloneRaw = sessionStorage.getItem("heroCloneLoading");
+				sessionStorage.removeItem("heroCloneLoading");
+				if (heroCloneRaw) {
+					var heroClone = JSON.parse(heroCloneRaw);
+					// location.pathname comes back percent-encoded for any non-ASCII
+					// character in the slug (e.g. "alsina-carson-todo-me-extraña" ->
+					// "...extra%C3%B1a") — decode it so this compares literal-to-literal
+					// against heroClone.slug, which now comes straight from the anchor's
+					// own data-slug (see WorkListItem.astro), not a resolved URL. It also
+					// needs the site's base path prefixed (basePath, injected via
+					// define:vars above — this script is is:inline, so it never goes
+					// through Vite and can't read import.meta.env.BASE_URL itself) since
+					// location.pathname includes it under GitHub Pages' /calido-web base.
+					var herePath = decodeURIComponent(location.pathname).replace(/\/$/, "");
+					if (heroClone && heroClone.slug && herePath === basePath + "/trabajos/" + heroClone.slug) {
+						var cloneVideo = document.createElement("video");
+						cloneVideo.id = "hero-clone-loading";
+						cloneVideo.dataset.slug = heroClone.slug;
+						cloneVideo.src = heroClone.src;
+						cloneVideo.muted = true;
+						cloneVideo.autoplay = true;
+						cloneVideo.loop = true;
+						cloneVideo.playsInline = true;
+						cloneVideo.style.cssText =
+							"position:fixed;inset:0;width:100vw;height:100vh;object-fit:cover;z-index:9999;pointer-events:none;margin:0;background:#000;";
+						if (typeof heroClone.time === "number") {
+							cloneVideo.addEventListener(
+								"loadedmetadata",
+								function () {
+									try {
+										cloneVideo.currentTime = heroClone.time;
+									} catch (e) {}
+								},
+								{ once: true }
+							);
+						}
+						document.documentElement.appendChild(cloneVideo);
+
+						// Safety net: no matter what goes wrong downstream (HeroVideoModal.astro
+						// not mounting, its reveal logic throwing, a slug mismatch, etc.), this
+						// guarantees the clone can never permanently cover the page.
+						setTimeout(function () {
+							var stuck = document.getElementById("hero-clone-loading");
+							if (stuck) {
+								stuck.remove();
+							}
+						}, 3000);
+					}
+				}
+			} catch (e) {}
+		</script>
 		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
+		<link rel="icon" type="image/png" href={withBase("/favicon.png")} />
 		<meta name="generator" content={Astro.generator} />
-		<title>Astro Basics</title>
+		<link rel="stylesheet" href="https://use.typekit.net/tkl8mcj.css" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800;900&display=swap" rel="stylesheet" />
+		<title>Calido</title>
 	</head>
 	<body>
+		<Header />
 		<slot />
+		<Footer />
 	</body>
 </html>
 
@@ -18,6 +97,65 @@
 	body {
 		margin: 0;
 		width: 100%;
-		height: 100%;
+		min-height: 100vh;
+		background-color: var(--color-cream);
 	}
 </style>
+
+<script>
+	import Lenis from "lenis";
+
+	const lenis = new Lenis();
+
+	function raf(time: number) {
+		lenis.raf(time);
+		requestAnimationFrame(raf);
+	}
+
+	requestAnimationFrame(raf);
+
+	// Videos (hero/secondary players, gallery clips) resolve their real
+	// height only once their metadata loads, which can happen after
+	// Lenis's initial measurement — force a recalculation when that happens
+	// so the scroll limit isn't stuck at a stale, shorter page height.
+	window.addEventListener("load", () => lenis.resize());
+	document.querySelectorAll("video").forEach((video) => {
+		video.addEventListener("loadedmetadata", () => lenis.resize());
+	});
+
+	// Cross-document hero-media morph (FullSizeVideo / WorkListItem / HeroVideoModal,
+	// see global.css's @view-transition rule): decoding a live-playing video is far
+	// more expensive for the browser to snapshot than a frozen frame, and it keeps
+	// costing extra per-frame work throughout the whole morph animation on top of
+	// that — pause it right before the outgoing snapshot is captured, resume it on
+	// the destination only once the animation has fully finished.
+	window.addEventListener("pageswap", () => {
+		document.querySelectorAll<HTMLVideoElement>("video[data-vt-name]").forEach((video) => {
+			if (!video.paused) video.pause();
+		});
+	});
+
+	window.addEventListener("pagereveal", (event: any) => {
+		const resume = () => {
+			document.querySelectorAll<HTMLVideoElement>("video[data-vt-name][autoplay]").forEach((video) => {
+				video.play().catch(() => {});
+			});
+		};
+		if (event.viewTransition) {
+			event.viewTransition.finished.finally(resume);
+		} else {
+			resume();
+		}
+	});
+
+	// bfcache restore (browser back/forward): the page can come back exactly as it was
+	// frozen, without re-running the inline <head> script or any other setup logic — if
+	// either hero-clone morph overlay (see WorkListItem.astro / Layout.astro's <head>
+	// script) was still on screen at the moment of navigating away, it'd reappear stuck
+	// on top of the restored page. Force both gone whenever a restore is detected.
+	window.addEventListener("pageshow", (event: PageTransitionEvent) => {
+		if (!event.persisted) return;
+		document.getElementById("hero-clone-loading")?.remove();
+		document.getElementById("hero-clone-outgoing")?.remove();
+	});
+</script>
