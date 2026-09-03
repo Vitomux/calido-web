@@ -27,11 +27,12 @@ jobs:
         uses: withastro/action@v3
         with:
           node-version: "22"
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./dist
+        # withastro/action's own last internal step already runs
+        # actions/upload-pages-artifact@v3 on ./dist with the default artifact
+        # name — an explicit upload-pages-artifact step here duplicated that
+        # under the same name, causing a 409 Conflict ("an artifact with this
+        # name already exists on the workflow run"). Confirmed against the
+        # action's real action.yml (v3 tag), not assumed.
 
   deploy:
     needs: build
