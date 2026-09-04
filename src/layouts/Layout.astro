@@ -19,6 +19,22 @@ const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 				}
 			} catch (e) {}
 
+			// Same handoff pattern, for the scoped root crossfade (see the
+			// html.vt-root-fade rule in global.css and WorkListItem.astro): a root
+			// crossfade only plays against whichever document is alive to render it, so
+			// the class set on the outgoing document alone isn't enough for a
+			// cross-document transition — set it here too, before first paint, so it's
+			// active on both ends of this one navigation. Removed again once the
+			// transition finishes (see the module <script>'s pagereveal handler below),
+			// so it never leaks into a later same-document Drawer navigation from this
+			// same page.
+			try {
+				if (sessionStorage.getItem("vtRootFade")) {
+					document.documentElement.classList.add("vt-root-fade");
+				}
+				sessionStorage.removeItem("vtRootFade");
+			} catch (e) {}
+
 			// Same handoff pattern, for the WorkListItem -> HeroVideoModal clone morph
 			// (see WorkListItem.astro): recreate the full-viewport video clone here,
 			// synchronously, before this page's own content has painted, so it keeps
@@ -141,10 +157,16 @@ const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 				video.play().catch(() => {});
 			});
 		};
+		// vt-root-fade (see global.css and WorkListItem.astro) is scoped to exactly one
+		// navigation — drop it once that transition has fully settled, so it can't
+		// affect a later same-document Drawer navigation away from this same page.
+		const cleanupRootFade = () => document.documentElement.classList.remove("vt-root-fade");
 		if (event.viewTransition) {
 			event.viewTransition.finished.finally(resume);
+			event.viewTransition.finished.finally(cleanupRootFade);
 		} else {
 			resume();
+			cleanupRootFade();
 		}
 	});
 

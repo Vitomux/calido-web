@@ -95,6 +95,20 @@ const { titulo, slug, clipPreview } = Astro.props;
 				);
 			} catch {}
 
+			// Scoped exception to global.css's "no root crossfade" rule, for this one
+			// navigation only: the clone already fills the viewport, but the real
+			// cross-document unload/reload still leaves a brief blank gap while the old
+			// document tears down and the destination repaints — a short root fade papers
+			// over that. Set on the outgoing document now; Layout.astro's blocking <head>
+			// script reads the sessionStorage flag and sets the same class on the incoming
+			// document too (a root crossfade only "plays" against whichever document is
+			// alive to render it), then removes it once the transition settles so it can't
+			// leak into a later Drawer navigation from that page.
+			document.documentElement.classList.add("vt-root-fade");
+			try {
+				sessionStorage.setItem("vtRootFade", "1");
+			} catch {}
+
 			window.location.href = href;
 		};
 

@@ -97,18 +97,36 @@ const { clipPreview, videoSecundario, track } = Astro.props;
 			}
 
 			function closeModal() {
-				// No view transition on the way out — straight back to the hero, no
-				// morph animation. Only opening still animates.
+				// Closing doesn't go through View Transitions at all anymore: clearing the
+				// view-transition-name on both ends (rather than swapping to a different
+				// view-transition-class) takes them out of the shared-element system
+				// entirely, so nothing tries to travel toward the thumbnail's position/size
+				// — the modal just fades out in place via a plain opacity animation.
 				if (vtName) {
 					if (modalVideo) modalVideo.style.viewTransitionName = "none";
-					if (previewVideo) previewVideo.style.viewTransitionName = vtName;
+					if (previewVideo) previewVideo.style.viewTransitionName = "none";
 				}
-				overlay!.setAttribute("data-open", "false");
-				overlay!.classList.add("hidden");
-				overlay!.classList.remove("flex");
-				overlay!.classList.remove("force-landscape");
-				rotateBtn?.setAttribute("aria-pressed", "false");
-				modalVideo?.pause();
+
+				const finish = () => {
+					overlay!.setAttribute("data-open", "false");
+					overlay!.classList.add("hidden");
+					overlay!.classList.remove("flex");
+					overlay!.classList.remove("force-landscape");
+					rotateBtn?.setAttribute("aria-pressed", "false");
+					modalVideo?.pause();
+					// openModal() sets this again itself on the next open, but restoring it
+					// here too means it's never left on "none" in the meantime — e.g. for a
+					// cross-document navigation away from and back to this same page.
+					if (vtName && previewVideo) previewVideo.style.viewTransitionName = vtName;
+				};
+
+				if (typeof overlay!.animate === "function") {
+					overlay!
+						.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, easing: "ease-out" })
+						.finished.then(finish, finish);
+				} else {
+					finish();
+				}
 			}
 
 			hero.addEventListener("click", openModal);

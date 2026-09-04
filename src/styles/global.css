@@ -19,6 +19,37 @@
 }
 
 /*
+ * Scoped exception to the rule above, for exactly one navigation: WorkListItem's
+ * Portfolio -> project click (see WorkListItem.astro's playCloneMorph/goToProject).
+ * That click already grows a clone to fill the viewport before navigating, but the
+ * real cross-document unload/reload still leaves a brief blank gap between the old
+ * document being torn down and the destination's clone repainting — this restores
+ * *just enough* of the browser's default root crossfade to paper over that gap,
+ * without turning the root fade back on globally (which would reintroduce a visible
+ * fade on every other navigation, Drawer included).
+ *
+ * `html.vt-root-fade` is set on BOTH ends of this one navigation: WorkListItem sets
+ * it on the outgoing document (and a sessionStorage flag) right before
+ * `window.location.href`; Layout.astro's blocking <head> script reads that flag and
+ * sets the class on the incoming document too, before first paint — same handoff
+ * pattern as the Drawer's `drawer-preopen` and the hero-clone's `heroCloneLoading`.
+ * It's removed again once the transition finishes (see Layout.astro's `pagereveal`
+ * handler), so it can never leak into a later same-document Drawer navigation from
+ * that same project page.
+ *
+ * `animation: none` above is a shorthand — it also resets `animation-name` to
+ * `none`, so a rule that only overrides `animation-duration` would have nothing to
+ * actually play (no keyframes referenced) despite matching. `animation: revert`
+ * restores the user-agent's real default crossfade (name, keyframes, easing) first,
+ * then `animation-duration` shortens *only* that duration.
+ */
+html.vt-root-fade::view-transition-old(root),
+html.vt-root-fade::view-transition-new(root) {
+  animation: revert;
+  animation-duration: 0.15s;
+}
+
+/*
  * "Drawer as loading screen": on a Drawer-driven navigation, the new page
  * has to render with the Drawer already open from its very first frame —
  * otherwise there'd be a flash of it closed before an opening animation
@@ -139,7 +170,6 @@ html.drawer-preopen #drawer-menu {
   animation: none;
   mix-blend-mode: normal;
 }
-
 
 /*
  * "Force landscape" for the video/photo modals (MediaModal, HeroVideoModal,
