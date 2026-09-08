@@ -1,5 +1,5 @@
 ---
-titulo: "Napo - Cuánto Dolió"
+titulo: "Napo - cuánto dolió"
 categoria: "Videoclip"
 descripcion: "Dirección creativa y producción del videoclip para el EP entero y tapa y contratapa del álbum."
 destacado: true
@@ -27,11 +27,11 @@ galeria:
 creditos:
   - items:
       - rol: "Dirección"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
       - rol: "Cám. y asist. de dirección"
         nombre: "Luca Monzón"
       - rol: "Montaje y color"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
       - rol: "Diseño gráfico"
         nombre: "Mateo Ibarra"
 ---

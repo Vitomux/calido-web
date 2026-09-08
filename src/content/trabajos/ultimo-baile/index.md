@@ -1,5 +1,5 @@
 ---
-titulo: "El Último Baile - Sirio y N.A43 Is The Eye"
+titulo: "El último baile - sirio y n.a43 is the eye"
 categoria: "Videoclip"
 descripcion: ""
 destacado: false
@@ -23,9 +23,9 @@ galeria:
 creditos:
   - items:
       - rol: "Dirección"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
       - rol: "Cám. y asist. de dirección"
         nombre: "Martina Balatorre"
       - rol: "Montaje y color"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
 ---

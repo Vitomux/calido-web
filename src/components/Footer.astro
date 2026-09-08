@@ -1,5 +1,6 @@
 ---
 import { withBase } from "../lib/paths";
+	const year = new Date().getFullYear();
 ---
 
 <footer
@@ -27,16 +28,137 @@ import { withBase } from "../lib/paths";
 		<a href="#" target="_blank" rel="noopener noreferrer" class="text-right">instagram</a>
 	</div>
 
-	<div class="relative w-full aspect-1920/771 overflow-hidden">
-		<img
-			src={withBase("/images/logo-calido.png")}
-			alt="Cálido"
-			class="absolute max-w-none left-[-57.18%] top-[-24.8%] w-[174.14%] h-[163.49%]"
-		/>
+	<div class="footer-logo relative w-full aspect-1920/771 overflow-hidden">
+		<canvas class="footer-logo-canvas absolute inset-0 h-full w-full"></canvas>
 	</div>
 
 	<div class="w-full flex items-center justify-between px-11 text-footer font-normal">
 		<p class="w-89.5">Design &amp; developed by Enciende Studio</p>
-		<p class="text-right w-114.5">2026</p>
+		<p class="text-right w-114.5">{year}</p>
 	</div>
 </footer>
+
+<script>
+	import { DotLottie } from "@lottiefiles/dotlottie-web";
+	import { withBase } from "../lib/paths";
+	// Replaces the footer's big logo PNG with a Lottie animation, played once
+	// (no loop) as it scrolls into view, then held on its last frame — the
+	// "self-writing" reveal, but as a real frame-by-frame animation instead of
+	// the clip-path wipe faked over the raster PNG that was tried before. No
+	// static-image fallback: if the file fails to load, the canvas just stays
+	// blank.
+
+
+	function initFooterLogoLottie() {
+		const wrapper = document.querySelector<HTMLElement>(".footer-logo");
+		const canvas = wrapper?.querySelector<HTMLCanvasElement>(".footer-logo-canvas");
+		if (!wrapper || !canvas) return;
+
+		let dotLottie: DotLottie | null = null;
+		let hasEntered = false;
+
+		// Capped explicitly rather than left at the library's default (which still
+		// scales up to ~2.5x on a 3x-DPR phone) — the canvas backing store's pixel
+		// count is devicePixelRatio² × its CSS pixel area, so this bounds how
+		// expensive every repaint is on high-DPR devices. Shared with applyZoom()
+		// below, which needs the same factor to convert OFFSET_X's CSS pixels
+		// into the canvas's own backing-store pixel space.
+		const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+		try {
+			dotLottie = new DotLottie({
+				canvas,
+				src: withBase("/branding/footer-logo.lottie"),
+				autoplay: false,
+				loop: false,
+				// "cover" on its own already frames the wordmark cleanly — no crop-hack
+				// needed (see the removed left/top/w/h overrides on the canvas: those
+				// were carried over from the old <img>, which had to zoom into a much
+				// more loosely-padded PNG; this animation's own composition is already
+				// tightly framed around the glyph).
+				layout: { fit: "cover", align: [0.5, 0.5] },
+				renderConfig: {
+					autoResize: true,
+					devicePixelRatio: DPR,
+				},
+			});
+		} catch {
+			return;
+		}
+
+		// Zooms in past the plain "cover" fit without inflating the canvas's real
+		// resolution: scales the content DotLottie already renders into the same
+		// fixed pixel grid (composes on top of the layout above), instead of a
+		// CSS transform/scale on the <canvas> element itself — DotLottie's
+		// autoResize re-measures the canvas via getBoundingClientRect(), which
+		// reflects any CSS transform applied to it, so a CSS scale would inflate
+		// the *real* backing store proportionally to the scale squared and bring
+		// the jank straight back.
+		//
+		// >>> Tune the zoom and horizontal position by changing these two numbers. <<<
+		// ZOOM: 1.0 = the plain "cover" fit (no extra zoom). Higher = bigger/more
+		// cropped at the edges. 1.8 read as too much; 1.62 is the current pick.
+		const ZOOM = 1.62;
+		// OFFSET_X: CSS pixels to shift the (already-zoomed) content horizontally.
+		// Negative = left, positive = right. 0 = centered. This is independent of
+		// ZOOM — it doesn't change the crop's size, just where it's panned to.
+		// -115 puts the "C" right at the left edge without cropping it (checked at
+		// this design's 1920px reference width, same as the text clamp()s in
+		// global.css) — being a flat px value rather than a %, it'll read as a
+		// slightly bigger/smaller shift at other viewport widths; switch it to a
+		// fraction of canvas.width below instead if that ever needs to match
+		// exactly across breakpoints.
+		const OFFSET_X = -40;
+
+		function applyZoom() {
+			if (!canvas || !dotLottie?.isLoaded) return;
+			// autoResize's own resize is async (ResizeObserver + a ~100ms internal
+			// debounce), so canvas.width/height can still be the browser's default
+			// 300x150 at the moment "load" fires — call the library's own resize()
+			// first to force canvas.width/height to sync with the real on-screen
+			// box size *synchronously*, before reading them below. Skipping this
+			// was the previous bug: the zoom ended up centered on/scaled against
+			// 300x150 instead of the real box, which looked both off-center and
+			// wrong-sized.
+			dotLottie.resize();
+			if (!canvas.width || !canvas.height) return;
+			// canvas.width/height are backing-store pixels (already × DPR), but
+			// OFFSET_X is meant as plain CSS/visual pixels for direct, DPR-independent
+			// tuning — multiply by DPR here so the same OFFSET_X value shifts the
+			// same *visual* distance regardless of screen density. ty is untouched:
+			// only the horizontal offset changes, vertical centering stays as-is.
+			const tx = ((1 - ZOOM) * canvas.width) / 2 + OFFSET_X * DPR;
+			const ty = ((1 - ZOOM) * canvas.height) / 2;
+			dotLottie.setTransform([ZOOM, 0, tx, 0, ZOOM, ty, 0, 0, 1]);
+		}
+
+		dotLottie.addEventListener("load", () => {
+			applyZoom();
+			if (hasEntered) dotLottie?.play();
+		});
+
+		// Re-applied after a resize settles (window resize / orientation change),
+		// so the zoom stays centered on the box's new size instead of drifting.
+		let resizeTimeout: ReturnType<typeof setTimeout>;
+		window.addEventListener("resize", () => {
+			clearTimeout(resizeTimeout);
+			resizeTimeout = setTimeout(applyZoom, 150);
+		});
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				for (const entry of entries) {
+					if (!entry.isIntersecting) continue;
+					hasEntered = true;
+					if (dotLottie?.isLoaded) dotLottie.play();
+					observer.disconnect();
+					break;
+				}
+			},
+			{ threshold: 0.45 }
+		);
+		observer.observe(wrapper);
+	}
+
+	initFooterLogoLottie();
+</script>

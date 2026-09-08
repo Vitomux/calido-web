@@ -1,5 +1,5 @@
 ---
-titulo: "Por Fuera y Engarce - NN.Carvalho y Jocbeats"
+titulo: "Por fuera y engarce - nn.carvalho y jocbeats"
 categoria: "Videoclip"
 descripcion: ""
 destacado: false
@@ -26,11 +26,11 @@ galeria:
 creditos:
   - items:
       - rol: "Dirección"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
       - rol: "Cám. y asist. de dirección"
         nombre: "Luca Monzón"
       - rol: "Montaje y color"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
       - rol: "Diseño gráfico"
         nombre: "Mateo Ibarra"
 ---

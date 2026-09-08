@@ -1,5 +1,5 @@
 ---
-titulo: "Super Chatarra - Blezzy y N.Muñoz"
+titulo: "Super chatarra - blezzy y n.muñoz"
 categoria: "Videoclip"
 descripcion: ""
 destacado: true
@@ -24,11 +24,11 @@ galeria:
 creditos:
   - items:
       - rol: "Dirección"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
       - rol: "Cám. y asist. de dirección"
         nombre: "Luca Monzón"
       - rol: "Montaje y color"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
       - rol: "Dirección de Arte"
         nombre: "Martina Balatorre"
 ---

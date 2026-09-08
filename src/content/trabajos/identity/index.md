@@ -1,5 +1,5 @@
 ---
-titulo: "Lou Booba - Identity"
+titulo: "Lou booba - identity"
 categoria: "Videoclip"
 descripcion: ""
 destacado: false
@@ -19,7 +19,7 @@ galeria:
 creditos:
   - items:
       - rol: "Dirección"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
       - rol: "Cám. y asist. de dirección"
         nombre: "Luca Monzón"
       - rol: "Asistente de arte"

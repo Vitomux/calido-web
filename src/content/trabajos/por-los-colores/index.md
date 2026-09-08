@@ -1,5 +1,5 @@
 ---
-titulo: "Por Los Colores - Nalech y Jocbeats"
+titulo: "Por los colores - nalech y jocbeats"
 categoria: "Videoclip"
 descripcion: "Dirección creativa y producción del visualizer full album."
 destacado: true
@@ -23,11 +23,11 @@ galeria:
 creditos:
   - items:
       - rol: "Dirección"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
       - rol: "Cám. y asist. de dirección"
         nombre: "Luca Monzón"
       - rol: "Montaje y color"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
       - rol: "Diseño gráfico"
         nombre: "Daiana Luque"
 ---

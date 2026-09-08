@@ -1,5 +1,5 @@
 ---
-titulo: "Alsina Carson Y NN.Carvalho - Todo Me Extraña"
+titulo: "alsina.carson y nn.carvalho - todo me extraña"
 categoria: "Videoclip"
 descripcion: ""
 destacado: true
@@ -21,7 +21,7 @@ galeria:
 creditos:
   - items:
       - rol: "Dirección"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
       - rol: "Diseño gráfico"
         nombre: "Mateo Ibarra"
 ---

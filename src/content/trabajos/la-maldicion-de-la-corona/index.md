@@ -1,5 +1,5 @@
 ---
-titulo: "Skinny Xero"
+titulo: "Skinny xero"
 categoria: "Dirección creativa"
 destacado: false
 descripcion: "Dirección creativa para el álbum de Skinny Xero. Incluyendo la producción de 2 videoclips, tapa y contratapa del disco y estrategia de lanzamiento y promoción en redes."
@@ -38,13 +38,13 @@ creditos:
       - rol: "Dirección"
         nombre: "Ezequiel San"
       - rol: "Montaje y color"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
   - label: "Clutch"
     items:
       - rol: "Dirección"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
       - rol: "Montaje y color"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
       - rol: "Dirección fotográfica"
         nombre: "Lourdes Sanz"
 ---

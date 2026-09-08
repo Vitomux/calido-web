@@ -1,5 +1,5 @@
 ---
-titulo: "Gorgojos - Ze Pequeña y NN.Carvalho"
+titulo: "Gorgojos - ze pequeña y nn.carvalho"
 categoria: "Videoclip"
 descripcion: ""
 destacado: false
@@ -21,13 +21,13 @@ galeria:
 creditos:
   - items:
       - rol: "Dirección"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
       - rol: "Cám. y asist. de dirección"
         nombre: "Luca Monzón"
       - rol: "Vestuario"
         nombre: ["Bianca Romanazzi", "Abril Urzagasti"]
       - rol: "Montaje y color"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
       - rol: "Diseño gráfico"
         nombre: "Mateo Ibarra"
 ---

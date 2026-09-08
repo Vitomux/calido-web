@@ -13,7 +13,7 @@ const { titulo, slug, clipPreview } = Astro.props;
 <a
 	href={withBase(`/trabajos/${slug}`)}
 	data-slug={slug}
-	class="work-list-item relative flex min-h-34 w-full cursor-pointer items-center border-t-4 border-b-4 border-t-black border-b-transparent py-8 pr-4 text-ink transition-colors hover:border-b-black hover:bg-ink hover:text-cream"
+	class="work-list-item relative flex min-h-34 w-full items-center border-t-4 border-b-4 border-t-black border-b-transparent py-8 pr-4 text-ink transition-colors hover:border-b-black hover:bg-ink hover:text-cream cursor-none"
 >
 	<div class="flex w-full items-center justify-between gap-4 px-8">
 		<p class="min-w-0 flex-1 text-work font-din font-bold whitespace-normal md:whitespace-nowrap">{titulo}</p>

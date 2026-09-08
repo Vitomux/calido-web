@@ -1,5 +1,5 @@
 ---
-titulo: "Uber Drive - Santicuado.Q"
+titulo: "Uber drive - santicuado.q"
 categoria: "Videoclip"
 descripcion: ""
 destacado: true
@@ -24,13 +24,13 @@ galeria:
 creditos:
   - items:
       - rol: "Dirección"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
       - rol: "Cám. y asist. de dirección"
         nombre: "Luca Monzón"
       - rol: "Vestuario"
         nombre: "Trisine"
       - rol: "Montaje y color"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
       - rol: "Diseño gráfico"
         nombre: "Mora Gala"
 ---

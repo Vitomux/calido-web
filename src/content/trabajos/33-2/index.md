@@ -1,5 +1,5 @@
 ---
-titulo: "33-2 - NN.Carvalho y Juli Gerrini"
+titulo: "33-2 - nn.carvalho y juli gerrini"
 categoria: "Videoclip"
 descripcion: "Dirección creativa y producción del videoclip para el EP entero y tapa del álbum."
 destacado: false
@@ -25,13 +25,13 @@ galeria:
 creditos:
   - items:
       - rol: "Dirección"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
       - rol: "Cám. y asist. de dirección"
         nombre: "Luca Monzón"
       - rol: "Vestuario"
         nombre: "Bianca Romanazzi"
       - rol: "Montaje y color"
-        nombre: "Santi Galafassi"
+        nombre: "santi.galafassi"
       - rol: "Diseño gráfico"
         nombre: "Mateo Ibarra"
 ---
